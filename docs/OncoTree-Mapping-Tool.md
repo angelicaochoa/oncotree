@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # OncoTree to OncoTree Mapping Tool
+=======
+# OncoTree Mapping Tool
+>>>>>>> Updated README, Added Oncotree Converter doc
 
 The OncoTree Mapping tool was developed to facilitate the mapping of OncoTree codes between different OncoTree release versions. Instructions for running the tool can be found below in the [Running the tool](#running-the-tool) section. Background information on the Oncotree history modeling and examples of use cases can be found in the [OncoTree History Modeling](#oncotree-history-modeling) section.
 

@@ -21,14 +21,15 @@ import requests
 import sys
 import re
 
-ONCOTREE_WEBSITE_URL = "http://oncotree.mskcc.org/#/home?version="
-ONCOTREE_API_URL_BASE_DEFAULT = "http://oncotree.mskcc.org/api/"
+#ONCOTREE_WEBSITE_URL = "http://oncotree.mskcc.org/#/home?version="
+ONCOTREE_WEBSITE_URL = "http://dashi-dev.cbio.mskcc.org:8080/sheridan-oncotree/#/home?version="
+#ONCOTREE_API_URL_BASE_DEFAULT = "http://oncotree.mskcc.org/api/"
+ONCOTREE_API_URL_BASE_DEFAULT = "http://dashi-dev.cbio.mskcc.org:8080/sheridan-oncotree/api/"
 ONCOTREE_VERSION_ENDPOINT = "versions"
 ONCOTREE_TUMORTYPES_ENDPOINT = "tumorTypes"
 VERSION_API_IDENTIFIER_FIELD = "api_identifier"
 VERSION_RELEASE_DATE_FIELD = "release_date"
 METADATA_HEADER_PREFIX = "#"
-PASSTHROUGH_ONCOTREE_CODE_LIST = ["NA"] # These codes will be passed through the converter without examination or alteration
 
 # field names used for navigating tumor types
 CHILDREN_CODES_FIELD = "children"
@@ -66,23 +67,23 @@ def validate_input_oncotree_versions(oncotree_versions_list, source_version, tar
         sys.exit(1)
 
 #--------------------------------------------------------------
-def validate_and_fetch_oncotree_version_release_dates(source_version, target_version, oncotree_api_url_base):
-    if source_version == target_version:
+def validate_and_fetch_oncotree_version_indexes(source_version, target_version, oncotree_api_url_base):
+    if source_oncotree_version_name == target_oncotree_version_name:
         print >> sys.stderr, "Error: Source oncotree version (%s) and target oncotree version (%s) are the same.  There is no need to convert this file." % (source_version, target_version)
     oncotree_versions_list = fetch_oncotree_versions(oncotree_api_url_base)
 
     # validate source and target versions
     validate_input_oncotree_versions(oncotree_versions_list, source_version, target_version)
 
-    # return release dates of source and target versions from available oncotree versions
-    source_oncotree_version_release_date = -1
-    target_oncotree_version_release_date = -1
-    for version in oncotree_versions_list:
-        if version[VERSION_API_IDENTIFIER_FIELD] == source_version:
-            source_oncotree_version_release_date = version[VERSION_RELEASE_DATE_FIELD]
+    # return indexes of source and target versions from available oncotree versions
+    source_oncotree_version_index, target_oncotree_version_index = -1, -1
+    for index, version in enumerate(sorted(response.json(), key = lambda k: k[VERSION_RELEASE_DATE_FIELD])):
+        if version[VERSION_API_IDENTIFIER_FIELD] == source_oncotree_version_name:
+
+            source_oncotree_version_index = index
         if version[VERSION_API_IDENTIFIER_FIELD] == target_version:
-            target_oncotree_version_release_date = version[VERSION_RELEASE_DATE_FIELD]
-    return source_oncotree_version_release_date, target_oncotree_version_release_date
+            target_oncotree_version_index = index
+    return source_oncotree_version_index, target_oncotree_version_index
 
 #--------------------------------------------------------------
 def load_oncotree_version(oncotree_version_name, oncotree_api_url_base):
@@ -136,9 +137,6 @@ def load_source_file(source_file):
         
     with open(source_file) as data_file:
         for line_number, line in enumerate(data_file):
-            if '\r' in line:
-                print >> sys.stderr, "ERROR: source file (%s) is not in the required format (tab delimited, newline line breaks). carriage return characters encountered." % (source_file) 
-                sys.exit(1)
             if line.startswith(METADATA_HEADER_PREFIX) or len(line.rstrip()) == 0:
                 header_and_comment_lines[line_number] = line
                 continue
@@ -225,15 +223,11 @@ def translate_oncotree_codes(source_file_mapped_list, source_oncotree, target_on
 # 3) multiple directly mapped options (w/ or w/o children), False
 # 4) multiple related options (closest parents/children, don't include children), False
 def get_oncotree_code_options(source_oncotree_code, source_oncotree, target_oncotree, is_backwards_mapping):
-    if source_oncotree_code in PASSTHROUGH_ONCOTREE_CODE_LIST:
+    if source_oncotree_code in ["N/A", "", "NA"]:
         return source_oncotree_code, True
     if source_oncotree_code not in source_oncotree:
-        GLOBAL_LOG_MAP[source_oncotree_code][CHOICES_FIELD] = ["???"]
-        GLOBAL_LOG_MAP[source_oncotree_code][IS_LOGGED_FLAG] = True
-        if len(source_oncotree_code) == 0:
-            return "ONCOTREE_CODE column blank : use a valid oncotree code or \"NA\"", False
-        else:
-            return ("%s -> ???, Oncotee code not in source oncotree version" % (source_oncotree_code)), False
+        print >> sys.stderr, "ERROR: Oncotree code (%s) can not be found in source oncotree. Please verify source version." % (source_oncotree_code)
+        sys.exit(1)
     source_oncotree_node = source_oncotree[source_oncotree_code]
     # get a set of possible codes that source code has been directly mapped to
     possible_target_oncotree_codes = get_possible_target_oncotree_codes(source_oncotree_node, target_oncotree, is_backwards_mapping)
@@ -448,7 +442,6 @@ def write_to_target_file(translated_source_file_mapped_list, target_file, header
             formatted_data = map(lambda x: record.get(x,''), header)
             f.write('\t'.join(formatted_data) + '\n')
             line_num += 1
-    print >> sys.stdout, "Primary target file written to %s" % (target_file)
 
 #--------------------------------------------------------------
 # sorts logging map based on resolution type
@@ -476,59 +469,49 @@ def write_summary_file(target_file, source_version, target_version):
     # For each category, codes with more granular codes introduced are shown first
     unmappable_codes = sorted([unmappable_code for unmappable_code, unmappable_node in GLOBAL_LOG_MAP.items() if unmappable_node[NEIGHBORS_FIELD]])
     ambiguous_codes = sorted([ambiguous_code for ambiguous_code, ambiguous_node in GLOBAL_LOG_MAP.items() if len(ambiguous_node[CHOICES_FIELD]) > 1], key = lambda k: sort_by_resolution_method(k, GLOBAL_LOG_MAP[k]))
-    resolved_codes = sorted([resolved_code for resolved_code, resolved_node in GLOBAL_LOG_MAP.items() if len(resolved_node[CHOICES_FIELD]) == 1 and not ("???" in resolved_node[CHOICES_FIELD]) ], key = lambda k: sort_by_resolution_method(k, GLOBAL_LOG_MAP[k]))
-    unrecognized_codes = sorted([unrecognized_code for unrecognized_code, unrecognized_node in GLOBAL_LOG_MAP.items() if ("???" in unrecognized_node[CHOICES_FIELD]) ], key = lambda k: sort_by_resolution_method(k, GLOBAL_LOG_MAP[k]))
+    resolved_codes = sorted([resolved_code for resolved_code, resolved_node in GLOBAL_LOG_MAP.items() if len(resolved_node[CHOICES_FIELD]) == 1], key = lambda k: sort_by_resolution_method(k, GLOBAL_LOG_MAP[k]))
 
     html_summary_file = os.path.splitext(target_file)[0] + "_summary.html"
     with open(html_summary_file, "w") as f:
         # General info
         f.write("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<title>Mapping Summary</title>\n<meta charset=\"UTF-8\">\n<style>\nbody {font-family:Arial; line-height:1.4}\n\n</style>\n</head><body>\n")
         f.write("<h1>Mapping Summary</h1>\n")
-        #f.write("<p><b>Source Version</b>: %s<br>\n<b>Target Version</b>: <a href=\"%s\">%s</a> *<i>All resolutions should be made with this version</i><br><br>\n" % (source_version, oncotree_url, target_version))
-        f.write("<p>Mapped <b>%s</b> to <b>%s</b><br>" % (source_version, target_version))
+        #f.write("<p><b>Source Version</b>: %s<br />\n<b>Target Version</b>: <a href=\"%s\">%s</a> *<i>All resolutions should be made with this version</i><br /><br />\n" % (source_version, oncotree_url, target_version))
+        f.write("<p>Mapped <b>%s</b> to <b>%s</b><br />" % (source_version, target_version))
         f.write("All resolutions should be made with version: <b><a href=\"%s\">%s</a></b>\n" % (oncotree_url, target_version))
-        f.write("<h3>Contents</h3><ul>\n");
-        if unrecognized_codes:
-            f.write("<li><a href=\"#unrecognized_header\">Codes which were not present in source oncotree version</a> (action required)</li>\n")
-        if unmappable_codes:
-            f.write("<li><a href=\"#not_mapped_header\">Codes that could not be mapped to a code</a> (action required)</li>\n")
-        if ambiguous_codes:
-            f.write("<li><a href=\"#mapped_to_multiple_header\">Codes mapped to multiple codes</a> (action required)</li>\n")
-        if resolved_codes:
-            f.write("<li><a href=\"#mapped_header\">Codes mapped to exactly one code</a> (please review)</li>\n")
-        f.write("</ul>&nbsp;\n&nbsp;\n")
-        # Unrecognized codes - action required, but not guidance. Just list them
-        if unrecognized_codes:
-            f.write("<hr><h2 id=\"unrecognized_header\">The following codes were not present in the source oncotree version:</h2>\n")
-        for oncotree_code in unrecognized_codes:
-            f.write("<p><b>Original Code</b>: %s<br>\n" % ("&lt;blank&gt;" if len(oncotree_code) == 0 else oncotree_code))
-            f.write("<b>New Code cannot be determined\n")
+        f.write("<h4>Contents</h4>");
+        f.write("<ul><li><a href=\"#not_mapped_header\">Codes that could not be mapped to a code</a> (action required)</li>\n")
+        f.write("<li><a href=\"#mapped_to_multiple_header\">Codes mapped to multiple codes</a> (action required)</li>\n")
+        f.write("<li><a href=\"#mapped_header\">Codes mapped to exactly one code</a> (please review)</li></ul><br />\n")
+
         # Unmappable codes - printed first since they MUST be resolved with manual tree exploration
         if unmappable_codes:
-            f.write("<hr><h2 id=\"not_mapped_header\">The following codes could not be mapped to a code in the target version and require additional resolution:</h2>\n")
+            f.write("<hr/><h3 id=\"not_mapped_header\">The following codes could not be mapped to a code in the target version and require additional resolution:</h3>\n")
         for oncotree_code in unmappable_codes:
-            f.write("<p><b>Original Code</b>: %s<br>\n" % (oncotree_code))
-            f.write("<b>Closest Neighbors</b>: %s<br>\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][NEIGHBORS_FIELD]))
-            f.write("To resolve, please refer to closest shared parent node %s and its descendants <a href=\"%s\">here</a><br></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
+            f.write("<p><b>Original Code</b>: %s<br />\n" % (oncotree_code))
+            f.write("<b>Closest Neighbors</b>: %s<br />\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][NEIGHBORS_FIELD]))
+            f.write("To resolve, please refer to closest shared parent node %s and its descendants <a href=\"%s\">here</a><br /></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
+
         # Ambiguous codes - printed second since they MUST be resolved but already provide choices
         if ambiguous_codes:
-            f.write("<hr><h2 id=\"mapped_to_multiple_header\">The following codes mapped to multiple codes in the target version. Please select from provided choices:</h2>\n")
+            f.write("<hr/><h3 id=\"mapped_to_multiple_header\">The following codes mapped to multiple codes in the target version. Please select from provided choices:</h3>\n")
         for oncotree_code in ambiguous_codes:
-            f.write("<p><b>Original Code</b>: %s<br>\n" % (oncotree_code))
-            f.write("<b>Choices</b>: %s<br>\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][CHOICES_FIELD]))
+            f.write("<p><b>Original Code</b>: %s<br />\n" % (oncotree_code))
+            f.write("<b>Choices</b>: %s<br />\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][CHOICES_FIELD]))
             if GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]:
-                f.write("*Warning: Target version has introduced more granular nodes.<br>\n")
-                f.write("You can examine the closest shared parent node %s and its descendants <a href=\"%s\">here</a><br></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
+                f.write("*Warning: Target version has introduced more granular nodes.<br />\n")
+                f.write("You may want to examine the closest shared parent node %s and its descendants <a href=\"%s\">here</a><br /></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
+        
         # Directly mapped codes - no action required, might want to explore more granular choices
         if resolved_codes:
-            f.write("<hr><h2 id=\"mapped_header\">The following codes mapped to exactly one code:</h2>\n")
+            f.write("<hr/><h3 id=\"mapped_header\">The following codes mapped to exactly one code:</h3>\n")
         for oncotree_code in resolved_codes:
-            f.write("<p><b>Original Code</b>: %s<br>\n" % (oncotree_code))
-            f.write("<b>New Code</b>: %s<br>\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][CHOICES_FIELD]))
+            f.write("<p><b>Original Code</b>: %s<br />\n" % (oncotree_code))
+            f.write("<b>New Code</b>: %s<br />\n" % ','.join(GLOBAL_LOG_MAP[oncotree_code][CHOICES_FIELD]))
             if GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]:
-                f.write("*Warning: Target version has introduced more granular nodes.<br>\n")
-                f.write("You can examine the closest shared parent node %s and its descendants <a href=\"%s\">here</a><br></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
-    print >> sys.stdout, "Mapping summary HTML file written out to %s" % (html_summary_file)
+                f.write("*Warning: Target version has introduced more granular nodes.<br />\n")
+                f.write("You may want to examine the closest shared parent node %s and its descendants <a href=\"%s\">here</a><br /></p>\n" % ((GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD]), (oncotree_url + "&search_term=(" + GLOBAL_LOG_MAP[oncotree_code][CLOSEST_COMMON_PARENT_FIELD] + ")")))
+    print >> sys.stdout, "Oncotree version conversion completed. Mapping summary HTML file written out to %s" % (html_summary_file)
 
 def usage(parser, message):
     if message:
@@ -541,7 +524,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--auto-mapping-enabled", help = "enable automatic resolution of ambiguous mappings", action = "store_true")
     parser.add_argument("-i", "--source-file", help = "source file provided by user", required = True)
-    parser.add_argument("-o", "--target-file", help = "destination file to write out new file contents", required = True)
+    parser.add_argument("-o", "--output-file", help = "destination file to write out new file contents", required = True)
     parser.add_argument("-s", "--source-version", help = "current oncotree version used in the source file", required = True)
     parser.add_argument("-t", "--target-version", help = "oncotree version to be mapped to in the destination file", required = True)
     parser.add_argument("-u", "--oncotree-url", required = False, help=argparse.SUPPRESS)
@@ -561,18 +544,17 @@ def main():
         usage(parse, "Error: missing arguments")
 
     if not os.path.isfile(source_file):
-        print >> sys.stderr, "Error: cannot access source file (%s) : no such file" % (source_file)
+        print >> sys.stderr, "Error: Input file (%s) can not be found" % (source_file)
         sys.exit(1)
 
-    source_oncotree_version_release_date, target_oncotree_version_release_date = validate_and_fetch_oncotree_version_release_dates(source_version, target_version, oncotree_api_url_base)
-    is_backwards_mapping = target_oncotree_version_release_date < source_oncotree_version_release_date # determines directionality of source - target oncotree mapping
+    source_index, target_index = validate_and_fetch_oncotree_version_indexes(source_version, target_version, oncotree_api_url_base)
+    is_backwards_mapping = target_index < source_index # determines directionality of source - target oncotree mapping
     source_file_mapped_list, header, header_and_comment_lines = load_source_file(source_file)
     source_oncotree = load_oncotree_version(source_version, oncotree_api_url_base)
     target_oncotree = load_oncotree_version(target_version, oncotree_api_url_base)
     translated_source_file_mapped_list = translate_oncotree_codes(source_file_mapped_list, source_oncotree, target_oncotree, is_backwards_mapping)
     write_to_target_file(translated_source_file_mapped_list, target_file, header, header_and_comment_lines)
     write_summary_file(target_file, source_version, target_version)
-    print >> sys.stdout, "Oncotree version conversion completed."
 
 if __name__ == '__main__':
    main()
