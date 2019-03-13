@@ -9,12 +9,16 @@ The OncoTree Mapping tool was developed to facilitate the mapping of OncoTree co
 ## [Setting up and downloading the tool](#setting-up-and-downloading-the-tool)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Follow this link to download the script:
  <span style="font-size:6em;">[oncotree_to_oncotree.py &#x2B07;](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py)</span>
 =======
 TODO: change the URL to MSK OncoTree
 Follow this link to download the [oncotree_to_oncotree.py](http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/downloads/oncotree_to_oncotree.py) script.
 >>>>>>> test-update
+=======
+Follow this link to download the [oncotree_to_oncotree.py](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py) script.
+>>>>>>> test update
 
 The OncoTree Mapping tool was written in `python`. To use the tool, please install the following python module if it is not already installed:
 
@@ -36,7 +40,7 @@ python <path/to/scripts/oncotree_to_oncotree.py> --source-file <path/to/source/f
 - `-s | --source-version`: This is the source OncoTree version. The OncoTree codes in the source file must correspond to this version.
 - `-t | --target-version`: This is the target OncoTree version that the script will attempt to map the source file OncoTree codes to.
 
-The list of OncoTree versions available are viewable [here](http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/api/versions) on the dropdown menu [OncoTree home page](http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/#/home).
+The list of OncoTree versions available are viewable [here](http://oncotree.mskcc.org/api/versions) on the dropdown menu [OncoTree home page](http://oncotree.mskcc.org/#/home).
 
 ## [Output](#output)
 
