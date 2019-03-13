@@ -20,7 +20,7 @@ The OncoTree Mapping Tool was developed to facilitate the mapping of OncoTree co
 
 ## OncoTree API
 
-For APIs, please see the [OncoTree Swagger page](http://oncotree.mskcc.org/#/home?tab=api)
+For APIs, please see the [OncoTree Swagger page](http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/#/home?tab=api)
 
 
 ## License

@@ -22,9 +22,9 @@ import sys
 import re
 
 #ONCOTREE_WEBSITE_URL = "http://oncotree.mskcc.org/#/home?version="
-ONCOTREE_WEBSITE_URL = "http://dashi-dev.cbio.mskcc.org:8080/sheridan-oncotree/#/home?version="
+ONCOTREE_WEBSITE_URL = "http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/#/home?version="
 #ONCOTREE_API_URL_BASE_DEFAULT = "http://oncotree.mskcc.org/api/"
-ONCOTREE_API_URL_BASE_DEFAULT = "http://dashi-dev.cbio.mskcc.org:8080/sheridan-oncotree/api/"
+ONCOTREE_API_URL_BASE_DEFAULT = "http://dashi-dev.cbio.mskcc.org:8080/angelica-oncotree/api/"
 ONCOTREE_VERSION_ENDPOINT = "versions"
 ONCOTREE_TUMORTYPES_ENDPOINT = "tumorTypes"
 VERSION_API_IDENTIFIER_FIELD = "api_identifier"
