@@ -448,7 +448,7 @@ def write_to_target_file(translated_source_file_mapped_list, target_file, header
             formatted_data = map(lambda x: record.get(x,''), header)
             f.write('\t'.join(formatted_data) + '\n')
             line_num += 1
-    print >> sys.stdout, "Primary output file written to %s" % (output_file)
+    print >> sys.stdout, "Target file written to %s" % (output_file)
 
 #--------------------------------------------------------------
 # sorts logging map based on resolution type

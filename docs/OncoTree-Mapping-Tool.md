@@ -4,8 +4,7 @@ The OncoTree Mapping tool was developed to facilitate the mapping of OncoTree co
 
 ## [Setting up and downloading the tool](#setting-up-and-downloading-the-tool)
 
-TODO: change the URL to MSK OncoTree
-Follow this link to download the [oncotree_to_oncotree.py](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py) script.
+Follow this link to download the script: [oncotree_to_oncotree.py](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py)
 
 The OncoTree Mapping tool was written in `python`. To use the tool, please install the following python module if it is not already installed:
 
@@ -56,13 +55,9 @@ A **revocation** represents OncoTree codes for which the current OncoTree node _
 
 ## Output
 
- TODO: EXPAND OUTPUT EXPLANATION
-
  The OncoTree Mapper Tool will add a new column called `ONCOTREE_SUGGESTIONS` containing suggestions for OncoTree codes if a direct mapping was not available.
 
-TODO: ADD CANONICAL EXAMPLES OF EACH TYPE OF MAPPING CASE
-
- **Example 1: Schema describing the revocation of OncoTree node ALL in a later OncoTree release version.**
+**Example 1: Schema describing the revocation of OncoTree node ALL in a later OncoTree release version.**
 
 ![Example 1](http://oncotree.mskcc.org/images/example_1.png)
 
