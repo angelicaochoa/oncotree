@@ -4,7 +4,8 @@ The OncoTree Mapping tool was developed to facilitate the mapping of OncoTree co
 
 ## [Setting up and downloading the tool](#setting-up-and-downloading-the-tool)
 
-Follow this link to download the script: [**oncotree_to_oncotree.py**](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py)
+Follow this link to download the script:
+ <span style="font-size:6em;">[oncotree_to_oncotree.py &#x2B07;](http://oncotree.mskcc.org/downloads/oncotree_to_oncotree.py)</span>
 
 The OncoTree Mapping tool was written in `python`. To use the tool, please install the following python module if it is not already installed:
 
